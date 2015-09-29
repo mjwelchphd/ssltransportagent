@@ -1,0 +1,29 @@
+Gem::Specification.new do |spec|
+  spec.name          = 'ssltransportagent'
+  spec.version       = '0.1'
+  spec.date          = '2015-09-27'
+  spec.summary       = "A Ruby Gem providing a complete SSL Transport Agent package."
+  spec.authors       = ["Michael J. Welch, Ph.D."]
+  spec.description   = "SSL Transport Agent is a foundation for all applications that may be classified as Transport Agents (TA). A TA listens to one or more TCP ports and when a connection is made to a listening port, a process is dispatched to communicate with that connection. The most common examples of this type of application are Mail Transport Agents (commonly known as Mail Servers), HTTPS Server (commonly known as a Web Server), Mail Delivery Agents (DOVECOT, for example), and other applications that exchange data through the internet.
+
+This gem only handles the interface to the network. The application which will process the data (yours) sits on top of this layer.
+
+This gem can operate in plain text or encrypted mode, and provides methods for issuing queries to MySQL and DNS. At the time of this writing, it contains only an AUTH PLAIN authentication method.
+
+The test application is a full, multi-port, multi-process SMTP receiver with TLS encryption and PLAIN authentication which demonstrates how the SSL Transport Agent is used.
+
+This gem is also an excellent demonstration of how to make SSLSockets work, for those interested in such things.
+
+This gem (C) 2015 Michael J. Welch, Ph.D. <mjwelchphd@gmail.com>
+Source code can be found on GitHub: https://github.com/mjwelchphd/ssltransportagent"
+  spec.email         = 'mjwelchphd@gmail.com'
+  spec.homepage      = 'http://www.czarmail.com'
+  spec.author        = 'Michael J. Welch, Ph.D.'
+  spec.bindir        = 'bin'
+  spec.executable    = 'ssltransportagentgemtest.rb'
+  spec.files         = Dir['lib/*.rb'] + Dir['bin/*']
+  spec.platform      = Gem::Platform::CURRENT
+  spec.require_paths = [ 'lib' ]
+  spec.homepage      = 'http://rubygems.org/gems/ssltransportagentgemtest.rb'
+  spec.license       = 'MIT'
+end
