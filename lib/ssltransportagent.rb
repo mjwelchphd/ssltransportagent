@@ -162,7 +162,7 @@ class TAReceiver
       @connection.write(text+CRLF)
 #puts "<-  #{text}"
       @log.info {"<-  #{text}"}
-      return text
+      return nil
     end
   end
 

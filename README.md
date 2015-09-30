@@ -107,9 +107,9 @@ end
 ```
 The test application included in the gem is bin/ssltransferagentgemtest.rb. It has a comple email receiver to demonstrate how to build your application.
 
-## Methods Available in TAReceiver
+## Methods Available in Class TAReceiver
 
-## Query Methods
+### Query Methods
 #### query_esc
 ```ruby
 escaped_string = query_esc(string)
@@ -168,6 +168,7 @@ result = query_value("select created_at from domains where id=12", :created_at)
 => 2014-05-29 21:22:21 +0000
 ```
 
+### DNS Methods
 
 #### dig_a
 ```ruby
@@ -236,6 +237,7 @@ result = "23.253.107.107".dig_ptr
 ```
 Take into account that many websites don't have a reverse address DNS record. This is something commonly associated with SMTP servers, and is used to find the domain name of the client which is connecting with the intent to send email. Since it's common for large systems to route outgoing mail through a MSA (Mail Submissin Agent), there is no guarantee that the sender's domain will be the same as the MSA's domain.
 
+### SMTP Server Live Test
 
 #### mta_live?(port)
 ```ruby
@@ -251,6 +253,7 @@ or
 => "421 Service not available (getaddrinfo: Name or service not known)"
 ```
 
+### Validation Methods
 
 #### validate_plain
 This method validates a password using the base64 plaintext in an AUTH command. A typical AUTH command might look like this:
@@ -262,16 +265,16 @@ The value part of the command is a base 64 encoded message. For example:
 decoded = Base64::decode64("AGNvY29AY3phcm1haWwuY29tAG15LXBhc3N3b3Jk")
 => "\x00coco@czarmail.com\x00my-password"
 or
-=> ["coco@example.com", "my-password"]
+=> decoded.split("\x00")[1..-1] => ["coco@example.com", "my-password"]
 ```
 The validate_plain method decodes the AUTH PLAIN value, gets the username and password, and yields the password to the block. The block looks up the password hash for someplace (someplace your application stores it), then returns that. The validate_plain method validates the password from the AUTH PLAIN value against the user's password hash to see if it is valid or not. For example:
 ```ruby
-"AGNvY29AY3phcm1haWwuY29tAG15LXBhc3N3b3Jk".validate_plain { "{CRYPT}IwYH/ZXeR8vUM" }
+"AGNvY29AY3phcm1haWwuY29tAG15LXBhc3N3b3Jk".validate_plain { |username| "{CRYPT}IwYH/ZXeR8vUM" }
 => true
-"AGNvY29AY3phcm1haWwuY29tAHh4LXBhc3N3b3Jk".validate_plain { "{CRYPT}IwYH/ZXeR8vUM" }
+"AGNvY29AY3phcm1haWwuY29tAHh4LXBhc3N3b3Jk".validate_plain { |username| "{CRYPT}IwYH/ZXeR8vUM" }
 => false
 ```
-In this example, of course, we don't look up the hash: we just stick it in to test. The second one was the wrong password, so it failed.
+In this example, of course, we ignore |username| and don't look up the hash: we just return the hash we're using for testing. The second one is an example of a wrong password, so it fails.
 
 
 # Things To Do
