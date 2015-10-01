@@ -150,24 +150,24 @@ class TAReceiver
   end
 
   # send text to the client
-  def send_text(text)
+  def send_text(text,echo=true)
     if text.class==Array
       text.each do |line|
         @connection.write(line+CRLF)
 #puts "<-  #{line}"
-        @log.info {"<-  #{line}"}
+        @log.info {"<-  #{line}"} if echo
       end
       return text.last
     else
       @connection.write(text+CRLF)
 #puts "<-  #{text}"
-      @log.info {"<-  #{text}"}
+      @log.info {"<-  #{text}"} if echo
       return nil
     end
   end
 
   # receive text from the client
-  def recv_text(echo)
+  def recv_text(echo=true)
     begin
       Timeout.timeout(ReceiverTimeout) do
         temp = @connection.gets

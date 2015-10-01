@@ -1,3 +1,6 @@
+# v0.3
+* Changed send_text to add an `echo` parameter. This, and the `echo` in recv_text allow the application to avoid logging long runs of data, such as a large email with significant text or coded binary.
+
 # v0.2
 * Changed the send_text method to return nil. This change was needed for SMTP Tranport Agent that uses this gem.
 

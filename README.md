@@ -109,12 +109,31 @@ The test application included in the gem is bin/ssltransferagentgemtest.rb. It h
 
 ## Methods Available in Class TAReceiver
 
+### IO Methods
+
+#### send_text
+```ruby
+send_text(text,echo)
+```
+The send_text method sends `text` to the client while adding a `<cr><lf>` at the end of each line. The `echo` parameter can be true (default) or false, and determines whether or not the text will be copied into the log.
+
+The `text` parameter may be a single String, or an Array of Strings.
+
+#### recv_text
+```ruby
+text = recv_text(echo)
+```
+The recv_text method receives one line of text from the client, strips off the `<cr><lf>`, and returns the text. It *does not* make any other changes to the text, such as stripping off leading and trailing spaces. The `echo` parameter can be true (default) or false, and determines whether or not the text will be copied into the log.
+
+If a timeout occurs, recv_text makes an entry into the log of `" -> <eod>"`, then returns nil.
+
+
 ### Query Methods
 #### query_esc
 ```ruby
 escaped_string = query_esc(string)
 ```
-Special characters in the String `string` are replaced, i.e., x0d character will be replaced with "\r", et.al. This method prevents users from passing parameters that execute as code.
+Special characters in the String `string` are replaced, i.e., hex 0D character will be replaced with `\r`, et.al. This method prevents users from passing parameters that execute as code.
 
 #### query_act
 ```ruby
@@ -175,7 +194,7 @@ result = query_value("select created_at from domains where id=12", :created_at)
 result = "example.com".dig_a
 ```
 This method looks up an A record in the domain's DNS. It returns the IPv4 address or nil, if the record is not found. For example,
-```language
+```ruby
 ip = "example.com".dig_a
 => "93.184.216.34"
 ```
@@ -230,7 +249,7 @@ ip = "github.com".dig_mx
 ```ruby
 result = "23.253.107.107".dig_ptr
 ```
-This method looks up a PTR record (sometimes called a reverse address) in the domain's DNS. It returns the address or nil, if there is none. For example,
+This method looks up a PTR record (sometimes called a reverse DNS address) in the domain's DNS. It returns the address or nil, if there is none. For example,
 ```ruby
 result = "23.253.107.107".dig_ptr
 => "mail.czarmail.com"
@@ -247,7 +266,8 @@ This method opens a socket to the IP/port to see if there is an SMTP server ther
 ```ruby
 ok = "mail.czarmail.com".mta_live?(587)
 => "250 mail.czarmail.com ESMTP Czar Mail Exim 4.84 Tue, 29 Sep 2015 05:45:16 +0000"
-or
+
+ok = "example.com".mta_live?(25)
 => "421 Service not available (execution expired)"
 or
 => "421 Service not available (getaddrinfo: Name or service not known)"
