@@ -15,7 +15,7 @@ class NilClass
   def dig_dk; nil; end
   def dig_ptr; nil; end
   def mta_live?(port); nil; end
-  def validate_plain; nil; end
+  def validate_plain; return "", false; end
 
 end
 
@@ -100,14 +100,15 @@ class String
   # this validates a password with the base64 plaintext in an AUTH command
   # encoded -> AGNvY29AY3phcm1haWwuY29tAG15LXBhc3N3b3Jk => ["coco@example.com", "my-password"]
   # "my-password" --> {CRYPT}IwYH/ZXeR8vUM
-  # "AGNvY29AY3phcm1haWwuY29tAG15LXBhc3N3b3Jk".validate_plain { "{CRYPT}IwYH/ZXeR8vUM" } => true
-  # "AGNvY29AY3phcm1haWwuY29tAHh4LXBhc3N3b3Jk".validate_plain { "{CRYPT}IwYH/ZXeR8vUM" } => false
+  # "AGNvY29AY3phcm1haWwuY29tAG15LXBhc3N3b3Jk".validate_plain { "{CRYPT}IwYH/ZXeR8vUM" } => "coco@example.com", true
+  # "AGNvY29AY3phcm1haWwuY29tAHh4LXBhc3N3b3Jk".validate_plain { "{CRYPT}IwYH/ZXeR8vUM" } => "coco@example.com", false
   def validate_plain
     # decode and split up the username and password)
     username, password = Base64::decode64(self).split("\x00")[1..-1]
+    return "", false if username.nil? || password.nil?
     passwd_hash = yield(username) # get the hash
     m = passwd_hash.match(/^{(.*)}(.*)$/)
-    UnixCrypt.valid?(password, m[2])
+    return username, UnixCrypt.valid?(password, m[2])
   end
 
 =begin

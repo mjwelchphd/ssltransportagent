@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name          = 'ssltransportagent'
-  spec.version       = '0.3'
+  spec.version       = '0.4'
   spec.date          = '2015-09-30'
   spec.summary       = "A Ruby Gem providing a complete SSL Transport Agent package."
   spec.authors       = ["Michael J. Welch, Ph.D."]

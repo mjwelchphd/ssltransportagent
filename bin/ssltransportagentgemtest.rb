@@ -291,20 +291,19 @@ class TAReceiver
   # code, then {CRYPT} hash is simply returned always for testing. The method checks the
   # given password against the hash, and if it matches, it returns true; else false.
   #
-  # "AGNvY29AY3phcm1haWwuY29tAG15LXBhc3N3b3Jk".validate_plain { "{CRYPT}IwYH/ZXeR8vUM" } => true
+  # "AGNvY29AY3phcm1haWwuY29tAG15LXBhc3N3b3Jk".validate_plain { "{CRYPT}IwYH/ZXeR8vUM" } => "coco@czarmail.com", true
   def auth(value)
     auth_type, auth_encoded = value.split
     # auth_encoded contains both username and password
     case auth_type.upcase
     when "PLAIN"
       # get the password hash from the database
-      ok = auth_encoded.validate_plain do |username|
-        @username = username
+      username, ok = auth_encoded.validate_plain do |username|
         "{CRYPT}IwYH/ZXeR8vUM" # for testing
       end
       if ok
         send_text("235 2.0.0 Authentication succeeded")
-        @mail[:authenticated] = @username
+        @mail[:authenticated] = username
       else
         send_text("530 5.7.8 Authentication failed")
       end

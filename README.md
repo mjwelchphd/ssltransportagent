@@ -290,11 +290,15 @@ or
 The validate_plain method decodes the AUTH PLAIN value, gets the username and password, and yields the password to the block. The block looks up the password hash for someplace (someplace your application stores it), then returns that. The validate_plain method validates the password from the AUTH PLAIN value against the user's password hash to see if it is valid or not. For example:
 ```ruby
 "AGNvY29AY3phcm1haWwuY29tAG15LXBhc3N3b3Jk".validate_plain { |username| "{CRYPT}IwYH/ZXeR8vUM" }
-=> true
+=> "coco@example.com", true
 "AGNvY29AY3phcm1haWwuY29tAHh4LXBhc3N3b3Jk".validate_plain { |username| "{CRYPT}IwYH/ZXeR8vUM" }
-=> false
+=> "", false
 ```
-In this example, of course, we ignore |username| and don't look up the hash: we just return the hash we're using for testing. The second one is an example of a wrong password, so it fails.
+In this example, of course, we ignore |username| and don't look up the hash: we just return the hash we're using for testing. The second one is an example of a wrong password, so it fails. A malformed uathorization string may be undecipherable, and so will return "", false, as will a nil value.
+```ruby
+"This is not a legitamate base 64 encoded string".validate_plain { |username| "" }
+=> "", false
+```
 
 
 # Things To Do

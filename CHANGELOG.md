@@ -1,3 +1,6 @@
+# v0.4
+* Changed `validate_plain` to return the username and the (true/false) result. This change was necessary to obtain the username for log messages.
+
 # v0.3
 * Changed send_text to add an `echo` parameter. This, and the `echo` in recv_text allow the application to avoid logging long runs of data, such as a large email with significant text or coded binary.
 
