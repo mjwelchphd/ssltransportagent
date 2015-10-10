@@ -68,6 +68,7 @@ class TAServer
         # can terminate gracefully
         connection.close
         @log.info {"Connection closed from port #{local_port}"}
+        @log.close
       end
       # here we close the parent's copy of the connection --
       # the child (created by the Process::fork above) has another copy --
