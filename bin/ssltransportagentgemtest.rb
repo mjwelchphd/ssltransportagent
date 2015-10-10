@@ -3,6 +3,12 @@
 #require 'pretty_inspect'
 #require 'pdkim'
 
+#class TAServer
+#  def restart
+#    # handle a HUP request here
+#  end
+#end
+
 module ServerConfig
   ServerName = "mail.example.com"
   PrivateKey = "rubymta.key" # filename or nil
@@ -14,9 +20,9 @@ module ServerConfig
     :database => nil
   }
   ListeningPort = [2000] # an array of port numbers
-  UserName = "rubymta" # must be present if RubyTA run as root
-  GroupName = "rubymta" # must be present if RubyTA run as root
-  WorkingDirectory = "mta/" # directory or nil
+  UserName = "username" # must be present if ssltransportagent run as root
+  GroupName = "usergroup" # must be present if ssltransportagent run as root
+  WorkingDirectory = "myta/" # directory or nil
   LogPathAndFile = "ssltransportagentgemtest.log"
   LogFileLife = "daily"
 end
@@ -132,7 +138,7 @@ class TAReceiver
 
   def connect(remote_ip)
     @level = 1
-    send_text("220 2.0.0 #{ServerName} ESMTP RubyMTA 0.01 #{Time.new.strftime("%^a, %d %^b %Y %H:%M:%S %z")}")
+    send_text("220 2.0.0 #{ServerName} ESMTP #{Time.new.strftime("%^a, %d %^b %Y %H:%M:%S %z")}")
     @log.info {"Connection from #{remote_ip}"}
   end
 

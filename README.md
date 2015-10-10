@@ -14,14 +14,14 @@ The SSL Transport Agent Ruby gem is a foundation for building servers that commu
 10. A method to validate AUTH PLAIN (Linux CRYPT) hashes.
 
 #### It comes with a fully fleshed out SMTP receiver
-The ssltransportagentgemtest.rb application implements the receiver in an email server. This test program not only verifies whether or not the gem is functioning correctly, but also serves to demonstrate how to build an application that sits on top of ssltransportagent gem.
+The ssltransportagentgemtest.rb application implements a simple receiver in an email server. This test program not only verifies whether or not the gem is functioning correctly, but also serves to demonstrate how to build an application that sits on top of ssltransportagent gem.
 
 Too often the problem with using an otherwise useful gem is the lack of documentation. Even *very* important classes like SSLSocket sometimes have too little documentation to be able to implement their functionality. In fact, most of the posts on the Internet on how to use SSL Sockets **_are wrong!_** If you really want to know how it's done correctly, study the lib/ssltransportagent.rb file in this gem.
 
 Having a working demo application helps to solve this documentation problem, which is why it was included here.
 
 # This Is Not Yet Production Software
-I've tested it well, but small problems are sure to spring up once it goes into pseudo-production, and I start send thousands of previously received emails to it to see what happens. It's licensed under the MIT license, so technically, you're on your own. But practically, drop me an email at mjwelchphd@gmail.com if you need help with this. I want it to be useful, stable, and reliable.
+This server has been tested by sending it over 11,000 spam emails. No faults were found, but small problems may still crop up under further, more elaborate, testing. It's licensed under the MIT license, so technically, you're on your own. But practically, drop me an email at mjwelchphd@gmail.com if you need help with this. I want it to be useful, stable, and reliable.
 
 # Gem Dependancies
 This gem requires the following:
@@ -76,9 +76,9 @@ module ServerConfig
     :database => nil
   }
   ListeningPort = [2000] # an array of port numbers
-  UserName = "rubymta" # must be present if RubyTA run as root
-  GroupName = "rubymta" # must be present if RubyTA run as root
-  WorkingDirectory = "mta/" # directory or nil
+  UserName = "username" # must be present if ssltransportagent run as root
+  GroupName = "groupname" # must be present if ssltransportagent run as root
+  WorkingDirectory = "mywd/" # directory or nil
   LogPathAndFile = "ssltransportagentgemtest.log"
   LogFileLife = "daily"
 end
@@ -106,6 +106,39 @@ class TAReceiver
 end
 ```
 The test application included in the gem is bin/ssltransferagentgemtest.rb. It has a comple email receiver to demonstrate how to build your application.
+
+## Methods Available in Class TAServer
+
+### HUP and TERM (^C) traps
+
+A `kill -TERM <pid>` or `<ctrl-C>` will terminate the server.
+```ruby
+$ ssltransportagentgemtest.rb
+^C
+ssltransportagentgemtest terminated by admin ^C
+$
+```
+A `kill -HUP <pid>` will activate a TAServer::restart method, if you have one defined in your code.
+```ruby
+class TAServer
+  def restart
+  	puts "I just got a HUP request."
+  end
+end
+```
+then at another terminal:
+```ruby
+$ ps ax | grep ssltra
+  823 pts/0    Sl+    0:00 ssltransportagentgemtest.rb
+  829 pts/1    S+     0:00 grep --color=auto ssltra
+$ kill -hup 823
+```
+will result in:
+```
+ssltransportagent received a HUP request
+I just got a HUP request.
+```
+at the terminal where `ssltransportagentgemtest.rb` is running, with no other action. The first message comes from `ssltransportagent` itself, and the second comes from the `def restart`.
 
 ## Methods Available in Class TAReceiver
 
@@ -256,6 +289,24 @@ result = "23.253.107.107".dig_ptr
 ```
 Take into account that many websites don't have a reverse address DNS record. This is something commonly associated with SMTP servers, and is used to find the domain name of the client which is connecting with the intent to send email. Since it's common for large systems to route outgoing mail through a MSA (Mail Submissin Agent), there is no guarantee that the sender's domain will be the same as the MSA's domain.
 
+#### blacklisted?
+```ruby
+barracuda = 'b.barracudacentral.org'.blacklisted?(ip)
+spamhaus = 'zen.spamhaus.org'.blacklisted?(ip)
+```
+This method looks the given IP up on the blacklist and returns `true` or `false`. Each blacklist will tell on it's web site what the URL is for querying that blacklist'
+
+#### utf8
+```ruby
+utf8_string = "string with possible multi-wide (Unicode) characters".utf8
+```
+The given string is properly encoded into UTF-8 (Unicode) and if there are faulty character sequences in the string, replaces them with a '?'.
+
+**Be careful using this with email:**
+Email has to be received and transported with **_NO_** changes, except for the addition of extra headers at the beginning (before any DKIM headers). Some mail servers will remove leading and trailing spaces, convert tabs to spaces, etc. If there is a DKIM header in the email, after those changes, the DKIM *will not* verify. According to the RFC, an email must *not* contain non-ascii characters, unless they are properly encoded, but some emailers ignore the rule.
+
+This can be useful in translating the headers after they are parsed (leaving the original headers intact) in order to avoid unexpected results in Ruby.
+
 ### SMTP Server Live Test
 
 #### mta_live?(port)
@@ -300,7 +351,5 @@ In this example, of course, we ignore |username| and don't look up the hash: we 
 => "", false
 ```
 
-
-# Things To Do
-* Add a trap to catch HUP requests.
-* Add Spamhaus and other blacklist site lookups.
+# See Also
+The [smtptransportagent gem](https://github.com/mjwelchphd/smtptransportagent) is an email transporter which sits on top of this gem.

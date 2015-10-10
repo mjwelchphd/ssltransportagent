@@ -1,3 +1,8 @@
+# v0.5
+* Added `blacklisted?` and `utf8` methods. See README.
+* Added a `log.close` statement to close the child's connection to the log after the child exits.
+* Added a HUP trap for doing a restart without stopping the application.
+
 # v0.4
 * Changed `validate_plain` to return the username and the (true/false) result. This change was necessary to obtain the username for log messages.
 
