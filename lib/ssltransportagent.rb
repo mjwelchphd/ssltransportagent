@@ -84,12 +84,12 @@ class TAServer
     $db = nil # in case no DB is opened
     @log = nil # in case error occurs before the log is opened
 
-    # if RubyTA was started as root, make sure UserName and
+    # if ssltransportagent was started as root, make sure UserName and
     # GroupName have values because we have to drop root privileges
     # after we fork a process for the receiver
     if Process::Sys.getuid==0
       if UserName.nil? || GroupName.nil?
-        puts "RubyTA can't be started as root unless UserName and GroupName are set."
+        puts "ssltransportagent can't be started as root unless UserName and GroupName are set."
         exit(1)
       end
     end
@@ -111,7 +111,8 @@ class TAServer
     db_open if defined?(db_open)
 
     # this is the main loop which runs until admin enters ^C
-    Signal.trap("INT") { puts "\nRubyTA terminated by admin ^C"; raise TATerminate.new }
+    Signal.trap("INT") { puts "\n#{ServerName} terminated by admin ^C"; raise TATerminate.new }
+    Signal.trap("HUP") { puts "\n#{ServerName} received a HUP request"; restart if defined?(restart) }
     threads = []
     # start the server on multiple ports (the usual case)
     begin
