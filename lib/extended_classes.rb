@@ -66,6 +66,26 @@ class String
     end
   end
 
+  # returns true if the IP is blacklisted; otherwise false
+  # examples:
+  # barracuda = 'b.barracudacentral.org'.blacklisted?(ip)
+  # spamhaus = 'zen.spamhaus.org'.blacklisted?(ip)
+  def blacklisted?(dx)
+    domain = dx.split('.').reverse.join('.')+"."+self
+    a = []
+    Resolv::DNS.open do |dns|
+      a = dns.getresources(domain, Resolv::DNS::Resource::IN::A)
+    end
+    if a.size>0 then true else false end
+  end
+
+  # returns a UTF-8 encoded string -- be carefule using this with email:
+  # email has to be received and transported with NO changes, except the
+  # addition of extra headers at the beginning (before any DKIM headers)
+  def utf8
+    self.encode('UTF-8', 'binary', :invalid => :replace, :undef => :replace, :replace => '?')
+  end
+
   # opens a socket to the IP/port to see if there is an SMTP server
   # there - returns "250 ..." if the server is there, or 
   # times out in 5 seconds to prevent hanging the process
