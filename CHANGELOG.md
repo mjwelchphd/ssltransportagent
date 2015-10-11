@@ -1,3 +1,6 @@
+# v0.6
+* Added a trap for SIGCHLD to clean up finished processes.
+
 # v0.5
 * Added `blacklisted?` and `utf8` methods. See README.
 * Added a `log.close` statement to close the child's connection to the log after the child exits.
