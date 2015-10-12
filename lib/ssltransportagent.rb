@@ -157,14 +157,12 @@ class TAReceiver
     if text.class==Array
       text.each do |line|
         @connection.write(line+CRLF)
-#puts "<-  #{line}"
-        @log.info {"<-  #{line}"} if echo
+        @log.info {"<-  #{line}"} if echo && LogConversation
       end
       return text.last
     else
       @connection.write(text+CRLF)
-#puts "<-  #{text}"
-      @log.info {"<-  #{text}"} if echo
+      @log.info {"<-  #{text}"} if echo && LogConversation
       return nil
     end
   end
@@ -175,12 +173,11 @@ class TAReceiver
       Timeout.timeout(ReceiverTimeout) do
         temp = @connection.gets
         text = if temp.nil? then nil else temp.chomp end
-#puts " -> #{text}"
-        @log.info {" -> #{if text.nil? then "<eod>" else text end}"} if echo
+        @log.info {" -> #{if text.nil? then "<eod>" else text end}"} if echo && LogConversation
         return (if text.nil? then nil else text.chomp end)
       end
     rescue Timeout::Error => e
-      @log.info {" -> <eod>"}
+      @log.info {" -> <eod>"} if LogConversation
       return nil
     end
   end

@@ -29,7 +29,8 @@ end
 
 module ReceiverConfig
   ReceiverTimeout = 30 # seconds
-  RemoteSMTPPort = 25
+  RemoteSMTPPort = 25 # port 25 is the submitter port for remotes
+  LogConversation = false # enables the logging of the conversation
 end
 
 require 'ssltransportagent'

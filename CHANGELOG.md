@@ -1,3 +1,6 @@
+# v0.7
+* Added a configuration variable to control the logging of the conversation. Normally you don't want to see this because it has no useful function, other than for debugging.
+
 # v0.6
 * Added a trap for SIGCHLD to clean up finished processes.
 
