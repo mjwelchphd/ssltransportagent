@@ -113,7 +113,13 @@ class TAServer
     # this is the main loop which runs until admin enters ^C
     Signal.trap("INT") { puts "\n#{ServerName} terminated by admin ^C"; raise TATerminate.new }
     Signal.trap("HUP") { puts "\n#{ServerName} received a HUP request"; restart if defined?(restart) }
-    Signal.trap("CHLD") { Process.wait(-1, Process::WNOHANG) }
+    Signal.trap("CHLD") do
+      begin
+      Process.wait(-1, Process::WNOHANG)
+      rescue Errno::ECHILD => e
+        # ignore the error
+      end
+    end
     threads = []
     # start the server on multiple ports (the usual case)
     begin
