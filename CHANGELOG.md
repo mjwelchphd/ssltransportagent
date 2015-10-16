@@ -1,3 +1,6 @@
+# v0.8
+* Added a trap to catch Errno::ECHILD in the trap("CHLD").
+
 # v0.7
 * Added a configuration variable to control the logging of the conversation. Normally you don't want to see this because it has no useful function, other than for debugging.
 
