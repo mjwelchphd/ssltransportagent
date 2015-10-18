@@ -1,3 +1,27 @@
+# v1.0
+* This version has been tested by sending over 23,000 emails received from spammers to it. There were no faults detected. This version is considered a stable release.
+* Removed the message in the SIGHUP trap.
+ 
+If you want a message, define
+```ruby
+class TAServer
+  def restart
+    puts "MyMailServer received a HUP request"
+  end
+end
+```
+But typically, you would silently restart like this:
+```ruby
+class TAServer
+  def restart
+    exec("ruby <path to your application>")
+  end
+end
+```
+The running server will be shutdown and restarted, replacing the current image with the new image in the same PID. Emails in the process of being received are in child processes and will continue to run and finish as normal.
+
+A message will be added to the log file showing that the server was (re)started. If the application is running as a deamon, there won't be a terminal to write to anyway, unless the system traps the output and emails it to you (in the same way crontab handles terminal output).
+
 # v0.9
 * Added a trap for Resolv::NXDomainError in blacklisted?"
 

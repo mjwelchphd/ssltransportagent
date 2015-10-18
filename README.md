@@ -20,8 +20,8 @@ Too often the problem with using an otherwise useful gem is the lack of document
 
 Having a working demo application helps to solve this documentation problem, which is why it was included here.
 
-# This Is Not Yet Production Software
-This server has been tested by sending it over 11,000 spam emails. No faults were found, but small problems may still crop up under further, more elaborate, testing. It's licensed under the MIT license, so technically, you're on your own. But practically, drop me an email at mjwelchphd@gmail.com if you need help with this. I want it to be useful, stable, and reliable.
+# Version 1.0 is considered a stable release.
+This server has been tested by sending it over 23,000 spam emails. No faults were found. It's licensed under the MIT license, so technically, you're on your own. But practically, drop me an email at mjwelchphd@gmail.com if you need help with this. I want it to be useful, stable, and reliable.
 
 # Gem Dependancies
 This gem requires the following:

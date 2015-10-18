@@ -112,7 +112,7 @@ class TAServer
 
     # this is the main loop which runs until admin enters ^C
     Signal.trap("INT") { puts "\n#{ServerName} terminated by admin ^C"; raise TATerminate.new }
-    Signal.trap("HUP") { puts "\n#{ServerName} received a HUP request"; restart if defined?(restart) }
+    Signal.trap("HUP") { restart if defined?(restart) }
     Signal.trap("CHLD") do
       begin
       Process.wait(-1, Process::WNOHANG)
