@@ -1,3 +1,6 @@
+# v0.9
+* Added a trap for Resolv::NXDomainError in blacklisted?"
+
 # v0.8
 * Added a trap to catch Errno::ECHILD in the trap("CHLD").
 
