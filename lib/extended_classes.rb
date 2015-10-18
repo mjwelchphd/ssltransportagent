@@ -74,7 +74,11 @@ class String
     domain = dx.split('.').reverse.join('.')+"."+self
     a = []
     Resolv::DNS.open do |dns|
-      a = dns.getresources(domain, Resolv::DNS::Resource::IN::A)
+      begin
+        a = dns.getresources(domain, Resolv::DNS::Resource::IN::A)
+      rescue Resolv::NXDomainError
+        a=[]
+      end
     end
     if a.size>0 then true else false end
   end
