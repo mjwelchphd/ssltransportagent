@@ -1,3 +1,7 @@
+# v1.01
+* A fault was discovered in validate_plain which failed when a nil was returned in the yield asking for the password.
+
+
 # v1.0
 * This version has been tested by sending over 23,000 emails received from spammers to it. There were no faults detected. This version is considered a stable release.
 * Removed the message in the SIGHUP trap.

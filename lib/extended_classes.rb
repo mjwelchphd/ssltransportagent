@@ -131,6 +131,7 @@ class String
     username, password = Base64::decode64(self).split("\x00")[1..-1]
     return "", false if username.nil? || password.nil?
     passwd_hash = yield(username) # get the hash
+    return "", false if passwd_hash.nil?
     m = passwd_hash.match(/^{(.*)}(.*)$/)
     return username, UnixCrypt.valid?(password, m[2])
   end
