@@ -19,7 +19,11 @@ module ServerConfig
     :password => nil,
     :database => nil
   }
-  ListeningPort = [2000] # an array of port numbers
+  # ListeningPort is a list of ip+port numbers
+  # an IPV4 ip+port might be "93.184.216.34:2000", or "127.0.0.1:2000", or "0.0.0.0:2000"
+  # an IPV6 ip+port might be "2606:2800:220:1:248:1893:25c8:1946/2000", "::1/2000", or "0:0:0:0:0:0:0:0/2000"
+  # an IPV4 port number might be ["2000"] -- this is equivalent to "0.0.0.0:2000"
+  ListeningPort = ['2000'] # ['0.0.0.0:2000'] # or ['0:0:0:0:0:0:0:0/2000'] for IPV6
   UserName = "username" # must be present if ssltransportagent run as root
   GroupName = "usergroup" # must be present if ssltransportagent run as root
   WorkingDirectory = "myta/" # directory or nil
@@ -164,42 +168,41 @@ class TAReceiver
   end
 
   def mail_from(value)
-    @mail[:mailfrom] = mail = {}
-    mail[:value] = value
+    @mail[:mailfrom] = from = {}
+    from[:value] = value
     name = url = user = domain = mx = ip = nil
     m = value.match(/^(.*)<(.*)>$/)
     if m
-      mail[:name] = name = m[1].strip if !m[1].empty?
-      mail[:url] = url = m[2].strip if !m[2].empty?
+      from[:name] = name = m[1].strip if !m[1].empty?
+      from[:url] = url = m[2].strip if !m[2].empty?
     end
     user, domain = url.split("@") if url
     mx = domain.dig_mx if domain
-    mail[:mx] = mx
-    ip = mail[:mx][0].dig_a
-    mail[:ip] = ip
+    from[:mx] = mx
+    from[:ip] = if mx then from[:mx][0].dig_a else nil end
     @level = 3
     send_text("250 2.0.0 OK")
   end
 
   def rcpt_to(value)
     @mail[:rcptto] ||= []
-    mail = {}
-    mail[:value] = value
+    rcpt = {}
+    rcpt[:value] = value
     value = if value.empty? then nil else value end
     name = url = user = domain = mx = ip = nil
     if value
       user = domain = nil
       m = value.match(/^(.*)<(.*)>$/)
       if m
-        mail[:name] = name = m[1].strip if !m[1].empty?
-        mail[:url] = url = m[2].strip if !m[2].empty?
+        rcpt[:name] = name = m[1].strip if !m[1].empty?
+        rcpt[:url] = url = m[2].strip if !m[2].empty?
       end
       user, domain = url.split("@") if url
-      mail[:mx] = mx = domain.dig_mx
-      mail[:ip] = ip = mail[:mx][0].dig_a if mx
-      mail[:live] = smtp = if ip then ip.mta_live?(RemoteSMTPPort)[0]=='2' else false end
+      rcpt[:mx] = mx = domain.dig_mx
+      rcpt[:ip] = ip = if mx then rcpt[:mx][0].dig_a else nil end
+      rcpt[:live] = smtp = if ip then ip.mta_live?(RemoteSMTPPort)[0]=='2' else false end
     end
-    @mail[:rcptto] << mail
+    @mail[:rcptto] << rcpt
     @level = 4
     send_text("250 2.0.0 OK")
   end
