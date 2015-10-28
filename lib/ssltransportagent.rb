@@ -4,7 +4,9 @@ require 'mysql2'
 require 'net/telnet'
 require 'resolv'
 require 'base64'
+require 'etc'
 require 'unix_crypt'
+require 'socket'
 require_relative 'extended_classes'
 require_relative 'query_helpers'
 
@@ -14,13 +16,15 @@ class TAIncomplete < Exception; end
 class TAServer
 
   include ServerConfig
+  include Socket::Constants
 
   # this is the code executed after the process has been
   # forked and root privileges have been dropped
   def process_call(log, local_port, connection)
     begin
       Signal.trap("INT") { } # ignore ^C in the child process
-      address_family, remote_port, remote_hostname, remote_ip = connection.peeraddr
+      remote_ip, remote_port = connection.io.remote_address.ip_unpack
+      remote_hostname, remote_service = connection.io.remote_address.getnameinfo
       log.info {"Connection accepted on port #{local_port} from port #{remote_port} at #{remote_ip} (#{remote_hostname})"}
       # a new object is created here to provide separation between server and receiver
       # this call receives to email and does basic validation
@@ -32,6 +36,7 @@ class TAServer
     end
   end
 
+  # this method drops the process's root priviledges for security reasons
   def drop_root_privileges(user_name, group_name, working_directory)
     # drop root privileges
     if Process::Sys.getuid==0
@@ -44,6 +49,18 @@ class TAServer
     end
   end
 
+  # both the AF_INET and AF_INET6 families use this DRY method
+  def bind_socket(family,ip,port)
+    socket = Socket.new(family, SOCK_STREAM, 0)
+    sockaddr = Socket.sockaddr_in(port.to_i,ip)
+    socket.setsockopt(:SOCKET, :REUSEADDR, true)
+    socket.bind(sockaddr)
+    socket.listen(0)
+    return socket
+  end
+
+  # the listening thread is established in this method depending on the ListenPort
+  # argument passed to it -- it can be '<ipv6>/<port>', '<ipv4>:<port>', or just '<port>'
   def listening_thread(local_port)
     @log.info {"listening on port #{local_port}..."}
 
@@ -51,7 +68,25 @@ class TAServer
     $ctx = OpenSSL::SSL::SSLContext.new
     $ctx.key = $prv
     $ctx.cert = $crt
-    ssl_server = OpenSSL::SSL::SSLServer.new(TCPServer.new(local_port), $ctx);
+    
+    # check the parameter to see if it's valid
+    m = /^(([0-9a-fA-F]{0,4}:{0,1}){1,8})\/([0-9]{1,5})|(([0-9]{1,3}\.{0,1}){4}):([0-9]{1,5})|([0-9]{1,5})$/.match(local_port)
+    #<MatchData "2001:4800:7817:104:be76:4eff:fe05:3b18/2000" 1:"2001:4800:7817:104:be76:4eff:fe05:3b18" 2:"3b18" 3:"2000" 4:nil 5:nil 6:nil 7:nil>
+    #<MatchData "23.253.107.107:2000" 1:nil 2:nil 3:nil 4:"23.253.107.107" 5:"107" 6:"2000" 7:nil>
+    #<MatchData "2000" 1:nil 2:nil 3:nil 4:nil 5:nil 6:nil 7:"2000">
+    case
+      when !m[1].nil? # its AF_INET6
+        socket = bind_socket(AF_INET6,m[3],m[1])
+      when !m[4].nil? # its AF_INET
+        socket = bind_socket(AF_INET,m[6],m[4])
+      when !m[7].nil?
+        socket = bind_socket(AF_INET,"0.0.0.0",m[7])
+      else
+        raise ArgumentError.new(local_port)
+    end
+    ssl_server = OpenSSL::SSL::SSLServer.new(socket, $ctx);
+
+    # main listening loop starts in non-encrypted mode
     ssl_server.start_immediately = false
     loop do
       # we can't use threads because if we drop root privileges on any thread,
