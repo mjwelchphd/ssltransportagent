@@ -97,7 +97,7 @@ class String
     tcp_socket = nil
     welcome = nil
     begin
-      Timeout.timeout(5) do
+      Timeout.timeout(60) do
         begin
           tcp_socket = TCPSocket.open(self,port)
         rescue Errno::ECONNREFUSED => e
