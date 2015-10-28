@@ -1,6 +1,8 @@
+# v1.02
+* Modified ssltransportagent.rb to permit an IP address with the port number to bind the port to that IP. Also added support for IPV6 as well as IPV4. A `require 'etc'` was left off the previous versions, and was added here. It's needed in order to use ports under 1024 (i.e, 25 and 587 for SMTP, or 24 for Dovecot LMTP, for example).
+
 # v1.01
 * A fault was discovered in validate_plain which failed when a nil was returned in the yield asking for the password.
-
 
 # v1.0
 * This version has been tested by sending over 23,000 emails received from spammers to it. There were no faults detected. This version is considered a stable release.

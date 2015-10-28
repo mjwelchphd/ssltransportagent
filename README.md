@@ -14,7 +14,7 @@ The SSL Transport Agent Ruby gem is a foundation for building servers that commu
 10. A method to validate AUTH PLAIN (Linux CRYPT) hashes.
 
 #### It comes with a fully fleshed out SMTP receiver
-The ssltransportagentgemtest.rb application implements a simple receiver in an email server. This test program not only verifies whether or not the gem is functioning correctly, but also serves to demonstrate how to build an application that sits on top of ssltransportagent gem.
+The ssltransportagentgemtest.rb application implements a simple receiver for an email server. This test program not only verifies whether or not the gem is functioning correctly, but also serves to demonstrate how to build an application that sits on top of ssltransportagent gem.
 
 Too often the problem with using an otherwise useful gem is the lack of documentation. Even *very* important classes like SSLSocket sometimes have too little documentation to be able to implement their functionality. In fact, most of the posts on the Internet on how to use SSL Sockets **_are wrong!_** If you really want to know how it's done correctly, study the lib/ssltransportagent.rb file in this gem.
 
@@ -66,19 +66,29 @@ The basic server looks like this:
 #! /usr/bin/ruby
 
 module ServerConfig
+  # ServerName, PrivateKey, and Certificate are required
   ServerName = "mail.example.com"
   PrivateKey = "example.key" # filename or nil
   Certificate = "example.crt" # filename or nil
+  # if Host is specified, a MySQL connection will be opened
   Host = {
     :host => nil, # "localhost" (usually), or nil if MySQL not used
     :username => nil,
     :password => nil,
     :database => nil
   }
-  ListeningPort = [2000] # an array of port numbers
-  UserName = "username" # must be present if ssltransportagent run as root
-  GroupName = "groupname" # must be present if ssltransportagent run as root
-  WorkingDirectory = "mywd/" # directory or nil
+  # ListeningPort is a list of ip+port numbers
+  # an IPV4 ip+port might be "93.184.216.34:2000", or "127.0.0.1:2000", or "0.0.0.0:2000"
+  # an IPV6 ip+port might be "2606:2800:220:1:248:1893:25c8:1946/2000", "::1/2000", or "0:0:0:0:0:0:0:0/2000"
+  # an IPV4 port number might be just a port like ["2000"] -- this is equivalent to []"0.0.0.0:2000"]
+  ListeningPort = ['2000']
+  # UserName, GroupName, and WorkingDirectory must be present if ssltransportagent run as root
+  # otherwise, they may be nil
+  UserName = "username"
+  GroupName = "groupname"
+  WorkingDirectory = "mywd/"
+  # if not specified, the log will go to the working directory
+  # see http://ruby-doc.org/stdlib-2.2.3/libdoc/logger/rdoc/Logger.html for more info
   LogPathAndFile = "ssltransportagentgemtest.log"
   LogFileLife = "daily"
 end
