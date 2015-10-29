@@ -1,3 +1,6 @@
+# v1.03
+* The parameters got reversed on `bind_socket` in `ssltransportagent`. Fixed.
+
 # v1.02
 * Modified ssltransportagent.rb to permit an IP address with the port number to bind the port to that IP. Also added support for IPV6 as well as IPV4. A `require 'etc'` was left off the previous versions, and was added here. It's needed in order to use ports under 1024 (i.e, 25 and 587 for SMTP, or 24 for Dovecot LMTP, for example).
 

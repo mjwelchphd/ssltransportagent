@@ -50,7 +50,7 @@ class TAServer
   end
 
   # both the AF_INET and AF_INET6 families use this DRY method
-  def bind_socket(family,ip,port)
+  def bind_socket(family,port,ip)
     socket = Socket.new(family, SOCK_STREAM, 0)
     sockaddr = Socket.sockaddr_in(port.to_i,ip)
     socket.setsockopt(:SOCKET, :REUSEADDR, true)
