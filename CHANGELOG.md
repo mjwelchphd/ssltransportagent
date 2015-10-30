@@ -1,3 +1,6 @@
+# v1.05
+* Added a rescue for Errno::ENOTCONN which is caused by a port scan.
+
 # v1.04
 * Still had some problems with `bind_socket`. Changed the default for a lone port number `['2000']` to be `['0:0:0:0:0:0:0:0/2000]` which will start listening on both IPv4 and IPv6 on port 2000.
 

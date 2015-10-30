@@ -1,6 +1,6 @@
 # Build and install the gem
 gem build ssltransportagent-gemspec
-sudo gem install ssltransportagent-1.04-x86_64-linux.gem
+sudo gem install ssltransportagent-1.05-x86_64-linux.gem
 
 sudo gem uninstall ssltransportagent
 
@@ -10,13 +10,13 @@ sudo gem uninstall ssltransportagent
 # Other useful commands
 # git remote add origin https://github.com/mjwelchphd/ssltransportagent.git
 # git push -u origin master
-# gem push ssltransportagent-1.04-x86_64-linux.gem
+# gem push ssltransportagent-1.05-x86_64-linux.gem
 
 # git@github.com:mjwelchphd/ssltransportagent.git
 
 # >ssltransportagentgemtest.log; ruby -Ilib bin/ssltransportagentgemtest.rb
 
-# cd /usr/local/lib/ruby/gems/2.2.0/gems/ssltransportagent-1.04-x86_64-linux/
+# cd /usr/local/lib/ruby/gems/2.2.0/gems/ssltransportagent-1.05-x86_64-linux/
 
 
 swaks -tls -s 166.78.151.141:25 -f admin@czarmail.com -t def@gmail.com --ehlo tsarmail.org
