@@ -20,19 +20,27 @@ class TAServer
 
   # this is the code executed after the process has been
   # forked and root privileges have been dropped
-  def process_call(log, local_port, connection)
+  def process_call(log, local_port, connection, remote_port, remote_ip, remote_hostname, remote_service)
     begin
       Signal.trap("INT") { } # ignore ^C in the child process
-      remote_ip, remote_port = connection.io.remote_address.ip_unpack
-      remote_hostname, remote_service = connection.io.remote_address.getnameinfo
       log.info {"Connection accepted on port #{local_port} from port #{remote_port} at #{remote_ip} (#{remote_hostname})"}
+      # open the database, if any is required
+      if Host[:host]
+        $db = Mysql2::Client.new(Host)
+        db_open if defined?(db_open)
+        log.info {"MySQL database #{Host[:database]} opened on #{Host[:host]} by #{Host[:username]}"}
+      end
       # a new object is created here to provide separation between server and receiver
       # this call receives to email and does basic validation
       TAReceiver::new(log, connection) { |rcvr| rcvr.receive(local_port, Socket::gethostname, remote_port, remote_hostname, remote_ip) }
     rescue => e
-      log.fatal {"Rescue of last resort => #{e.to_s}"}
+      log.fatal {"Rescue of last resort => #{e.class.name} --> #{e.to_s}"}
       e.backtrace.each {|line| log.fatal {line}}
       exit(9)
+    ensure
+      # close the database
+      db_close if defined?(db_close)
+      $db.close if $db
     end
   end
 
@@ -95,15 +103,23 @@ class TAServer
       # and run at a user level--this is a security precaution
       connection = ssl_server.accept
       Process::fork do
-        drop_root_privileges(UserName,GroupName,WorkingDirectory) if !UserName.nil?
-        process_call(@log, local_port, connection)
-        # here we close the child's copy of the connection --
-        # since the parent already closed it's copy, this
-        # one will send a FIN to the client, so the client
-        # can terminate gracefully
-        connection.close
-        @log.info {"Connection closed from port #{local_port}"}
-        @log.close
+        begin
+          drop_root_privileges(UserName,GroupName,WorkingDirectory) if !UserName.nil?
+          remote_hostname, remote_service = connection.io.remote_address.getnameinfo
+          remote_ip, remote_port = connection.io.remote_address.ip_unpack
+          process_call(@log, local_port, connection, remote_port, remote_ip, remote_hostname, remote_service)
+          @log.info {"Connection closed on port #{local_port}"}
+        rescue Errno::ENOTCONN => e
+          @log.info {"Connection failure on port #{local_port} ignored; probably caused by a port scan"}
+        ensure
+          # here we close the child's copy of the connection --
+          # since the parent already closed it's copy, this
+          # one will send a FIN to the client, so the client
+          # can terminate gracefully
+          connection.close
+          # and finally, close the child's link to the log
+          @log.close
+        end
       end
       # here we close the parent's copy of the connection --
       # the child (created by the Process::fork above) has another copy --
@@ -141,10 +157,6 @@ class TAServer
     end
     @log.info {"Starting RubyTA at #{Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")}"}
 
-    # open the database, if any is required
-    $db = if Host[:host] then Mysql2::Client.new(Host) else nil end
-    db_open if defined?(db_open)
-
     # this is the main loop which runs until admin enters ^C
     Signal.trap("INT") { puts "\n#{ServerName} terminated by admin ^C"; raise TATerminate.new }
     Signal.trap("HUP") { restart if defined?(restart) }
@@ -169,9 +181,7 @@ class TAServer
       # nothing to do here
     end
 
-    # close the database and log
-    db_close if defined?(db_close)
-    $db.close if $db
+    # close the log
     @log.close if @log
   end
 
