@@ -23,7 +23,7 @@ module ServerConfig
   # an IPV4 ip+port might be "93.184.216.34:2000", or "127.0.0.1:2000", or "0.0.0.0:2000"
   # an IPV6 ip+port might be "2606:2800:220:1:248:1893:25c8:1946/2000", "::1/2000", or "0:0:0:0:0:0:0:0/2000"
   # an IPV4 port number might be ["2000"] -- this is equivalent to "0.0.0.0:2000"
-  ListeningPort = ['2000'] # ['0.0.0.0:2000'] # or ['0:0:0:0:0:0:0:0/2000'] for IPV6
+  ListeningPort = ['2000'] # same as ['0:0:0:0:0:0:0:0/2000'] for IPV4 & IPV6 or use ['0.0.0.0:2000'] for IPv4 only
   UserName = "username" # must be present if ssltransportagent run as root
   GroupName = "usergroup" # must be present if ssltransportagent run as root
   WorkingDirectory = "myta/" # directory or nil
