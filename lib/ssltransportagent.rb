@@ -80,7 +80,7 @@ class TAServer
       when !m[4].nil? # its AF_INET
         socket = bind_socket(AF_INET,m[6],m[4])
       when !m[7].nil?
-        socket = bind_socket(AF_INET,"0.0.0.0",m[7])
+        socket = bind_socket(AF_INET6,m[7],"0:0:0:0:0:0:0:0")
       else
         raise ArgumentError.new(local_port)
     end
