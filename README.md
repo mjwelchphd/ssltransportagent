@@ -20,8 +20,11 @@ Too often the problem with using an otherwise useful gem is the lack of document
 
 Having a working demo application helps to solve this documentation problem, which is why it was included here.
 
-# Version 1.0 is considered a stable release.
+# Version 1.0 is considered a stable release
 This server has been tested by sending it over 23,000 spam emails. No faults were found. It's licensed under the MIT license, so technically, you're on your own. But practically, drop me an email at mjwelchphd@gmail.com if you need help with this. I want it to be useful, stable, and reliable.
+
+## v1.04 is in pseudo-production testing
+A few problems and errors have surfaced since starting pseudo-production testing, which explains why there have been 4 updates in such a short period of time. I discovered that I needed more code to handle both IPv4 and IPv6 *and* IP-to-port binding (so that the server can be run only on localhost, or only on the outside network, for example).
 
 # Gem Dependancies
 This gem requires the following:
@@ -31,6 +34,7 @@ require 'logger'
 require 'mysql2'
 require 'net/telnet'
 require 'resolv'
+require 'etc'
 require 'base64'
 require 'unix_crypt'
 ```
@@ -38,6 +42,14 @@ All of these packages are found in the Ruby Standard Library (stdib 2.2.2 at the
 ```bash
 $ sudo gem install unix-crypt
 ```
+
+# TODO
+* Add parameter processing to implement the following:
+* Add a switch to start as a daemon
+* Add a switch to shutdown the daemon
+* Add a switch to restart the deamon
+* Build an /etc/init.d command file
+* Improve the documentation by adding a detailed description of the configuration parameters
 
 # Creating a Self-Signed Certificate
 Use OpenSSL to create a self-signed certificate for testing as follows:
