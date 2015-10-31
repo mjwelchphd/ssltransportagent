@@ -1,3 +1,6 @@
+# v1.06
+* Added rescues for Errno::EIO and Error::EPIPE which are caused by the client closing the port while the server is reading or writing it. This happens when the client closes it's port unexpectedly.
+
 # v1.05
 * Added a rescue for Errno::ENOTCONN which is caused by a port scan.
 

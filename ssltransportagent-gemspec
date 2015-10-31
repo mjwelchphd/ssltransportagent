@@ -1,7 +1,7 @@
 Gem::Specification.new do |spec|
   spec.name          = 'ssltransportagent'
-  spec.version       = '1.05'
-  spec.date          = '2015-10-30'
+  spec.version       = '1.06'
+  spec.date          = '2015-10-31'
   spec.summary       = "A Ruby Gem providing a complete SSL Transport Agent package."
   spec.authors       = ["Michael J. Welch, Ph.D."]
   spec.description   = "SSL Transport Agent is a foundation for all applications that may be classified as Transport Agents (TA). A TA listens to one or more TCP ports and when a connection is made to a listening port, a process is dispatched to communicate with that connection. The most common examples of this type of application are Mail Transport Agents (commonly known as Mail Servers), HTTPS Server (commonly known as a Web Server), Mail Delivery Agents (DOVECOT, for example), and other applications that exchange data through the internet.

@@ -11,6 +11,7 @@ require_relative 'extended_classes'
 require_relative 'query_helpers'
 
 class TATerminate < Exception; end
+class TAQuit < Exception; end
 class TAIncomplete < Exception; end
 
 class TAServer
@@ -33,6 +34,8 @@ class TAServer
       # a new object is created here to provide separation between server and receiver
       # this call receives to email and does basic validation
       TAReceiver::new(log, connection) { |rcvr| rcvr.receive(local_port, Socket::gethostname, remote_port, remote_hostname, remote_ip) }
+    rescue TAQuit
+      # nothing to do here
     rescue => e
       log.fatal {"Rescue of last resort => #{e.class.name} --> #{e.to_s}"}
       e.backtrace.each {|line| log.fatal {line}}
@@ -108,7 +111,7 @@ class TAServer
           remote_hostname, remote_service = connection.io.remote_address.getnameinfo
           remote_ip, remote_port = connection.io.remote_address.ip_unpack
           process_call(@log, local_port, connection, remote_port, remote_ip, remote_hostname, remote_service)
-          @log.info {"Connection closed on port #{local_port}"}
+          @log.info {"Connection closed on port #{local_port} by #{ServerName}"}
         rescue Errno::ENOTCONN => e
           @log.info {"Connection failure on port #{local_port} ignored; probably caused by a port scan"}
         ensure
@@ -202,19 +205,29 @@ class TAReceiver
     yield(self)
     connection.close
   end
+  
+  Unexpectedly = "; probably caused by the client closing the connection unexpectedly"
 
   # send text to the client
   def send_text(text,echo=true)
-    if text.class==Array
-      text.each do |line|
-        @connection.write(line+CRLF)
-        @log.info {"<-  #{line}"} if echo && LogConversation
+    begin
+      if text.class==Array
+        text.each do |line|
+          @connection.write(line+CRLF)
+          @log.info {"<-  #{line}"} if echo && LogConversation
+        end
+        return text.last
+      else
+        @connection.write(text+CRLF)
+        @log.info {"<-  #{text}"} if echo && LogConversation
+        return nil
       end
-      return text.last
-    else
-      @connection.write(text+CRLF)
-      @log.info {"<-  #{text}"} if echo && LogConversation
-      return nil
+    rescue Errno::EPIPE => e
+      @log.error {"#{e.to_s}#{Unexpectedly}"}
+      raise TAQuit
+    rescue Errno::EIO => e
+      @log.error {"#{e.to_s}#{Unexpectedly}"}
+      raise TAQuit
     end
   end
 
@@ -227,6 +240,9 @@ class TAReceiver
         @log.info {" -> #{if text.nil? then "<eod>" else text end}"} if echo && LogConversation
         return (if text.nil? then nil else text.chomp end)
       end
+    rescue Errno::EIO => e
+      @log.error {"#{e.to_s}#{Unexpectedly}"}
+      raise TAQuit
     rescue Timeout::Error => e
       @log.info {" -> <eod>"} if LogConversation
       return nil
