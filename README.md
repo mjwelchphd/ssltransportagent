@@ -8,7 +8,7 @@ The SSL Transport Agent Ruby gem is a foundation for building servers that commu
 4. The receiver processes can switch on full encryption (STARTTLS in a mail server, for example).
 5. A log file is built in.
 6. MySQL database is built in. A simple to use MySQL API is built in.
-7. Runs until terminated by a KILL or ^C.
+7. Runs until terminated by a `KILL -INT <pid>` or `^C`.
 8. A set of DNS queries is built in.
 9. A SMTP server tester (to see if a given MX has a live mail server running) is built in.
 10. A method to validate AUTH PLAIN (Linux CRYPT) hashes.
@@ -131,16 +131,21 @@ The test application included in the gem is bin/ssltransferagentgemtest.rb. It h
 
 ## Methods Available in Class TAServer
 
-### HUP and TERM (^C) traps
+### HUP and INT (^C) traps
 
-A `kill -TERM <pid>` or `<ctrl-C>` will terminate the server.
-```ruby
+A `kill -INT <pid>` or `<ctrl-C>` will terminate the server. Very likely this would be written like this:
+```bash
 $ ssltransportagentgemtest.rb
 ^C
 ssltransportagentgemtest terminated by admin ^C
 $
 ```
-A `kill -HUP <pid>` will activate a TAServer::restart method, if you have one defined in your code.
+or
+```bash
+sudo kill -INT `cat /run/ssltransportagent/ssltransportagent.pid`
+```
+
+A `kill -HUP <pid>` will activate a TAServer::restart method, if you have one defined in your code. For example, if you put this in your code:
 ```ruby
 class TAServer
   def restart
@@ -155,8 +160,12 @@ $ ps ax | grep ssltra
   829 pts/1    S+     0:00 grep --color=auto ssltra
 $ kill -hup 823
 ```
-will result in:
+or
+```bash
+kill -HUP `cat /run/ssltransportagent/ssltransportagent.pid`
 ```
+it will result in:
+```bash
 ssltransportagent received a HUP request
 I just got a HUP request.
 ```
@@ -182,6 +191,17 @@ The recv_text method receives one line of text from the client, strips off the `
 
 If a timeout occurs, recv_text makes an entry into the log of `" -> <eod>"`, then returns nil.
 
+#### set_mail_id
+```ruby
+set_mail_id(id)
+```
+The set_mail_id method allows some function higher up on the stack to set the parameter that will be passed to the logger. This parameter, if it is set, will be displayed in parenthesis after the log level in the log, thusly:
+
+If the `id` is "1Zv4Di-0XOlgP-DO," it will be displayed, for example, as:
+```
+2015-11-07 14:11:54 [INFO] (1Zv4Di-0XOlgP-DO) Connection from ::ffff:85.25.43.94
+```
+This parameter will be used for all log messages until it is reset, or cleared by passing `nil` as the `id`.
 
 ### Query Methods
 #### query_esc

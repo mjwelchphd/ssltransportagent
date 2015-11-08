@@ -1,4 +1,6 @@
 require 'openssl'
+require 'optparse'
+require 'ostruct'
 require 'logger'
 require 'mysql2'
 require 'net/telnet'
@@ -32,7 +34,7 @@ class TAServer
         log.info {"MySQL database #{Host[:database]} opened on #{Host[:host]} by #{Host[:username]}"}
       end
       # a new object is created here to provide separation between server and receiver
-      # this call receives to email and does basic validation
+      # this call receives the email and does basic validation
       TAReceiver::new(log, connection) { |rcvr| rcvr.receive(local_port, Socket::gethostname, remote_port, remote_hostname, remote_ip) }
     rescue TAQuit
       # nothing to do here
@@ -134,34 +136,80 @@ class TAServer
     end
   end
 
+  # this method parses the command line options
+  def process_options
+    options = OpenStruct.new
+    options.log = Logger::INFO
+    options.daemon = false
+    begin
+      OptionParser.new do |opts|
+        opts.on("--debug",  "Log all messages")     { |v| options.log = Logger::DEBUG }
+        opts.on("--info",   "Log all messages")     { |v| options.log = Logger::INFO }
+        opts.on("--warn",   "Log all messages")     { |v| options.log = Logger::WARN }
+        opts.on("--error",  "Log all messages")     { |v| options.log = Logger::ERROR }
+        opts.on("--fatal",  "Log all messages")     { |v| options.log = Logger::FATAL }
+        opts.on("--daemon", "Run as system daemon") { |v| options.daemon = true }
+      end.parse!
+    rescue OptionParser::InvalidOption => e
+      @log.warn {e.to_s}
+    end
+    options
+  end # process_options
+
   def main
     $db = nil # in case no DB is opened
-    @log = nil # in case error occurs before the log is opened
-
-    # if ssltransportagent was started as root, make sure UserName and
-    # GroupName have values because we have to drop root privileges
-    # after we fork a process for the receiver
-    if Process::Sys.getuid==0
-      if UserName.nil? || GroupName.nil?
-        puts "ssltransportagent can't be started as root unless UserName and GroupName are set."
-        exit(1)
-      end
-    end
-
-    # get the certificate, if any--a certificate is needed for STARTTLS
-    $prv = if PrivateKey then OpenSSL::PKey::RSA.new File.read(PrivateKey) else nil end
-    $crt = if Certificate then OpenSSL::X509::Certificate.new File.read(Certificate) else nil end
 
     # get setup and open the log
+    @log = nil # in case error occurs before the log is opened
     @log = Logger::new(LogPathAndFile, LogFileLife)
     @log.formatter = proc do |severity, datetime, progname, msg|
       pname = if progname then '('+progname+') ' else nil end
       "#{datetime.strftime("%Y-%m-%d %H:%M:%S")} [#{severity}] #{pname}#{msg}\n"
     end
-    @log.info {"Starting RubyTA at #{Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")}"}
+
+    # generate the first log messages
+    @log.info {"Starting RubyTA at #{Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")}, pid=#{Process::pid}"}
+    @log.info {"Options specified: #{ARGV.join(", ")}"}
+
+    # get the options from the command line
+    @options = process_options
+    @log.level = @options.log
+
+    # get the certificates, if any; they're needed for STARTTLS
+    # we do this before daemonizing because the working folder might change
+    $prv = if PrivateKey then OpenSSL::PKey::RSA.new File.read(PrivateKey) else nil end
+    $crt = if Certificate then OpenSSL::X509::Certificate.new File.read(Certificate) else nil end
+
+    # daemonize it if the option was set--it doesn't have to be root to daemonize it
+    Process::daemon if @options.daemon
+
+    # get the process ID and the user id AFTER demonizing, if that was requested
+    pid = Process::pid
+    uid = Process::Sys.getuid
+    
+    @log.info {"Daemonized at #{Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")}, pid=#{pid}, uid=#{uid}"} if @options.daemon
+
+    # store the pid of the server session
+    begin
+      File.open("/run/ssltransportagent/ssltransportagent.pid","w") { |f| f.write(pid.to_s) }
+    rescue => e
+      @log.warn {"#{e.inspect}"}
+      @log.warn {"The pid couldn't be written. To save the pid, create a directory '/run/ssltransportagent' with r/w permissions for this user."}
+      @log.warn {"Proceeding without writing the pid."}
+    end
+
+    # if ssltransportagent was started as root, make sure UserName and
+    # GroupName have values because we have to drop root privileges
+    # after we fork a process for the receiver
+    if uid==0 # it's root
+      if UserName.nil? || GroupName.nil?
+        @log.error {"ssltransportagent can't be started as root unless UserName and GroupName are set."}
+        exit(1)
+      end
+    end
 
     # this is the main loop which runs until admin enters ^C
-    Signal.trap("INT") { puts "\n#{ServerName} terminated by admin ^C"; raise TATerminate.new }
+    Signal.trap("INT") { raise TATerminate.new }
     Signal.trap("HUP") { restart if defined?(restart) }
     Signal.trap("CHLD") do
       begin
@@ -181,7 +229,14 @@ class TAServer
       # the joins are done ONLY after all threads are started
       threads.each { |thread| thread.join }
     rescue TATerminate
-      # nothing to do here
+      @log.info {"#{ServerName} terminated by admin ^C"}
+    end
+
+    # attempt to remove the pid file
+    begin
+      File.delete("/run/ssltransportagent/ssltransportagent.pid")
+    rescue => e
+      # ignore any error
     end
 
     # close the log
@@ -200,10 +255,15 @@ class TAReceiver
   # save the log and connection, then yield back
   # this method assured that the connection gets closed
   def initialize(log, connection)
+    @mail_id = nil
     @log = log
     @connection = connection
     yield(self)
     connection.close
+  end
+
+  def set_mail_id(id)
+    @mail_id = id
   end
   
   Unexpectedly = "; probably caused by the client closing the connection unexpectedly"
@@ -214,19 +274,19 @@ class TAReceiver
       if text.class==Array
         text.each do |line|
           @connection.write(line+CRLF)
-          @log.info {"<-  #{line}"} if echo && LogConversation
+          @log.debug(if @mail_id then @mail_id  end) {"<-  #{line}"} if echo && LogConversation
         end
         return text.last
       else
         @connection.write(text+CRLF)
-        @log.info {"<-  #{text}"} if echo && LogConversation
+        @log.debug(if @mail_id then @mail_id  end) {"<-  #{text}"} if echo && LogConversation
         return nil
       end
     rescue Errno::EPIPE => e
-      @log.error {"#{e.to_s}#{Unexpectedly}"}
+      @log.error(if @mail_id then @mail_id  end) {"#{e.to_s}#{Unexpectedly}"}
       raise TAQuit
     rescue Errno::EIO => e
-      @log.error {"#{e.to_s}#{Unexpectedly}"}
+      @log.error(if @mail_id then @mail_id  end) {"#{e.to_s}#{Unexpectedly}"}
       raise TAQuit
     end
   end
@@ -237,14 +297,14 @@ class TAReceiver
       Timeout.timeout(ReceiverTimeout) do
         temp = @connection.gets
         text = if temp.nil? then nil else temp.chomp end
-        @log.info {" -> #{if text.nil? then "<eod>" else text end}"} if echo && LogConversation
-        return (if text.nil? then nil else text.chomp end)
+        @log.debug(if @mail_id then @mail_id  end) {" -> #{if text.nil? then "<eod>" else text end}"} if echo && LogConversation
+        return text
       end
     rescue Errno::EIO => e
-      @log.error {"#{e.to_s}#{Unexpectedly}"}
+      @log.error(if @mail_id then @mail_id  end) {"#{e.to_s}#{Unexpectedly}"}
       raise TAQuit
     rescue Timeout::Error => e
-      @log.info {" -> <eod>"} if LogConversation
+      @log.debug(if @mail_id then @mail_id  end) {" -> <eod>"} if LogConversation
       return nil
     end
   end

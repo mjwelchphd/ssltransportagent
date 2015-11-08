@@ -1,3 +1,13 @@
+# v1.07
+* Rescues added for two errors caused by client closing port early.
+* Corrected some text in a comment.
+* Removed a piece of duplicated code.
+* Added options parser. The options are:
+(1) `--debug`, `--info`, `--warn`, `--error`, or `--fatal` to control the logging of messages. The default is `--info`.
+(2) `--daemon` to start the server as an unattended process.
+* The pid is stored in `/run/ssltransportagent/ssltransportagent.pid`. You must create the folder `/run/ssltransportagent` with permissions for the user under whom the ssltransportagent will be running; otherwise, ssltransportagent will still run, but the pid won't be stored. The server will try to remove the pid file upon exit, but if KILL -TERM or a similar kill command is used, the server will be stopped before it can "clean itself up". Always use `kill -INT <pid>` or `^C` to stop the server.
+* Added `set_mail_id(id)` to allow setting the parameter in calls to the logger. See README.md for more information.
+
 # v1.06
 * Added rescues for Errno::EIO and Error::EPIPE which are caused by the client closing the port while the server is reading or writing it. This happens when the client closes it's port unexpectedly.
 
