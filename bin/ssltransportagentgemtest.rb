@@ -131,10 +131,10 @@ class TAReceiver
         send_text(response)
       end
     rescue OpenSSL::SSL::SSLError => e
-      @log.error {"SSL error: #{e.to_s}"}
+      @log.error("%06d"%Process::pid) {"SSL error: #{e.to_s}"}
     end until @done
-#    @log.info { "Received Mail:\r\n#{@mail.pretty_inspect}" }
-    @log.info { "Received Mail:\r\n#{@mail.inspect}" }
+#    @log.info("%06d"%Process::pid) { "Received Mail:\r\n#{@mail.pretty_inspect}" }
+    @log.info("%06d"%Process::pid) { "Received Mail:\r\n#{@mail.inspect}" }
   end
 
 #-------------------------------------#
@@ -144,7 +144,7 @@ class TAReceiver
   def connect(remote_ip)
     @level = 1
     send_text("220 2.0.0 #{ServerName} ESMTP #{Time.new.strftime("%^a, %d %^b %Y %H:%M:%S %z")}")
-    @log.info {"Connection from #{remote_ip}"}
+    @log.info("%06d"%Process::pid) {"Connection from #{remote_ip}"}
   end
 
   def ehlo(value)
@@ -217,7 +217,7 @@ class TAReceiver
     else
       lines = []
       send_text("354 2.0.0 Enter message, ending with \".\" on a line by itself")
-      @log.info {" -> (email message)"}
+      @log.info("%06d"%Process::pid) {" -> (email message)"}
       while true
         text = recv_text(false)
         break if text=="."
@@ -229,7 +229,7 @@ class TAReceiver
       # requires PDKIM gem
 #      ok, signatures = pdkim_verify_an_email(PDKIM_INPUT_NORMAL, @mail[:data])
 #      signatures.each do |signature|
-#        @log.info(message_id){"Signature for '%s': %s"%[signature[:domain], PdkimReturnCodes[signature[:verify_status]]]}
+#        @log.info("%06d"%Process::pid) {"Signature for '%s': %s"%[signature[:domain], PdkimReturnCodes[signature[:verify_status]]]}
 #        @mail[:signatures] ||= []
 #        @mail[:signatures] << [signature[:domain], signature[:verify_status]]
 #      end if ok==PDKIM_OK
@@ -324,7 +324,7 @@ class TAReceiver
 
   def starttls(value)
     send_text("220 2.0.0 TLS go ahead")
-    @log.info {"<-> (handshake)"}
+    @log.info("%06d"%Process::pid) {"<-> (handshake)"}
     @connection.accept
     @encrypted = true
     @mail[:encrypted] = true

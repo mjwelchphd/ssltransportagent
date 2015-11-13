@@ -191,18 +191,6 @@ The recv_text method receives one line of text from the client, strips off the `
 
 If a timeout occurs, recv_text makes an entry into the log of `" -> <eod>"`, then returns nil.
 
-#### set_mail_id
-```ruby
-set_mail_id(id)
-```
-The set_mail_id method allows some function higher up on the stack to set the parameter that will be passed to the logger. This parameter, if it is set, will be displayed in parenthesis after the log level in the log, thusly:
-
-If the `id` is "1Zv4Di-0XOlgP-DO," it will be displayed, for example, as:
-```
-2015-11-07 14:11:54 [INFO] (1Zv4Di-0XOlgP-DO) Connection from ::ffff:85.25.43.94
-```
-This parameter will be used for all log messages until it is reset, or cleared by passing `nil` as the `id`.
-
 ### Query Methods
 #### query_esc
 ```ruby

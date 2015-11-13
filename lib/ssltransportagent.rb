@@ -26,21 +26,25 @@ class TAServer
   def process_call(log, local_port, connection, remote_port, remote_ip, remote_hostname, remote_service)
     begin
       Signal.trap("INT") { } # ignore ^C in the child process
-      log.info {"Connection accepted on port #{local_port} from port #{remote_port} at #{remote_ip} (#{remote_hostname})"}
+      log.info("%06d"%Process::pid) {"Connection accepted on port #{local_port} from port #{remote_port} at #{remote_ip} (#{remote_hostname})"}
       # open the database, if any is required
       if Host[:host]
         $db = Mysql2::Client.new(Host)
         db_open if defined?(db_open)
-        log.info {"MySQL database #{Host[:database]} opened on #{Host[:host]} by #{Host[:username]}"}
+        log.info("%06d"%Process::pid) {"MySQL database #{Host[:database]} opened on #{Host[:host]} by #{Host[:username]}"}
       end
       # a new object is created here to provide separation between server and receiver
       # this call receives the email and does basic validation
       TAReceiver::new(log, connection) { |rcvr| rcvr.receive(local_port, Socket::gethostname, remote_port, remote_hostname, remote_ip) }
     rescue TAQuit
       # nothing to do here
+    rescue Errno::ENOTCONN => e
+      log.warn("%06d"%Process::pid) {"Connection failure on port #{local_port} ignored; probably caused by a port scan"}
+    rescue Errno::ECONNRESET => e
+      log.warn("%06d"%Process::pid) {"Connection failure on port #{local_port} ignored; probably caused by a badly behaved client"}
     rescue => e
-      log.fatal {"Rescue of last resort => #{e.class.name} --> #{e.to_s}"}
-      e.backtrace.each {|line| log.fatal {line}}
+      log.fatal("%06d"%Process::pid) {"Rescue of last resort => #{e.class.name} --> #{e.to_s}"}
+      e.backtrace.each {|line| log.fatal("%06d"%Process::pid) {line}}
       exit(9)
     ensure
       # close the database
@@ -75,7 +79,7 @@ class TAServer
   # the listening thread is established in this method depending on the ListenPort
   # argument passed to it -- it can be '<ipv6>/<port>', '<ipv4>:<port>', or just '<port>'
   def listening_thread(local_port)
-    @log.info {"listening on port #{local_port}..."}
+    @log.info("%06d"%Process::pid) {"listening on port #{local_port}..."}
 
     # establish an SSL context
     $ctx = OpenSSL::SSL::SSLContext.new
@@ -113,9 +117,12 @@ class TAServer
           remote_hostname, remote_service = connection.io.remote_address.getnameinfo
           remote_ip, remote_port = connection.io.remote_address.ip_unpack
           process_call(@log, local_port, connection, remote_port, remote_ip, remote_hostname, remote_service)
-          @log.info {"Connection closed on port #{local_port} by #{ServerName}"}
+          @log.info("%06d"%Process::pid) {"Connection closed on port #{local_port} by #{ServerName}"}
         rescue Errno::ENOTCONN => e
-          @log.info {"Connection failure on port #{local_port} ignored; probably caused by a port scan"}
+          @log.warn("%06d"%Process::pid) {"Connection failure on port #{local_port} ignored; probably caused by a port scan"}
+        rescue => e
+          @log.fatal("%06d"%Process::pid) {"#{e.inspect}"}
+          e.backtrace.each {|line| log.fatal("%06d"%Process::pid) {line}}
         ensure
           # here we close the child's copy of the connection --
           # since the parent already closed it's copy, this
@@ -151,7 +158,7 @@ class TAServer
         opts.on("--daemon", "Run as system daemon") { |v| options.daemon = true }
       end.parse!
     rescue OptionParser::InvalidOption => e
-      @log.warn {e.to_s}
+      @log.warn("%06d"%Process::pid) {"#{e.inspect}"}
     end
     options
   end # process_options
@@ -168,8 +175,8 @@ class TAServer
     end
 
     # generate the first log messages
-    @log.info {"Starting RubyTA at #{Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")}, pid=#{Process::pid}"}
-    @log.info {"Options specified: #{ARGV.join(", ")}"}
+    @log.info("%06d"%Process::pid) {"Starting RubyTA at #{Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")}, pid=#{Process::pid}"}
+    @log.info("%06d"%Process::pid) {"Options specified: #{ARGV.join(", ")}"}
 
     # get the options from the command line
     @options = process_options
@@ -187,15 +194,15 @@ class TAServer
     pid = Process::pid
     uid = Process::Sys.getuid
     
-    @log.info {"Daemonized at #{Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")}, pid=#{pid}, uid=#{uid}"} if @options.daemon
+    @log.info("%06d"%Process::pid) {"Daemonized at #{Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")}, pid=#{pid}, uid=#{uid}"} if @options.daemon
 
     # store the pid of the server session
     begin
       File.open("/run/ssltransportagent/ssltransportagent.pid","w") { |f| f.write(pid.to_s) }
     rescue => e
-      @log.warn {"#{e.inspect}"}
-      @log.warn {"The pid couldn't be written. To save the pid, create a directory '/run/ssltransportagent' with r/w permissions for this user."}
-      @log.warn {"Proceeding without writing the pid."}
+      @log.warn("%06d"%Process::pid) {"#{e.inspect}"}
+      @log.warn("%06d"%Process::pid) {"The pid couldn't be written. To save the pid, create a directory '/run/ssltransportagent' with r/w permissions for this user."}
+      @log.warn("%06d"%Process::pid) {"Proceeding without writing the pid."}
     end
 
     # if ssltransportagent was started as root, make sure UserName and
@@ -203,7 +210,7 @@ class TAServer
     # after we fork a process for the receiver
     if uid==0 # it's root
       if UserName.nil? || GroupName.nil?
-        @log.error {"ssltransportagent can't be started as root unless UserName and GroupName are set."}
+        @log.error("%06d"%Process::pid) {"ssltransportagent can't be started as root unless UserName and GroupName are set."}
         exit(1)
       end
     end
@@ -229,7 +236,7 @@ class TAServer
       # the joins are done ONLY after all threads are started
       threads.each { |thread| thread.join }
     rescue TATerminate
-      @log.info {"#{ServerName} terminated by admin ^C"}
+      @log.info("%06d"%Process::pid) {"#{ServerName} terminated by admin ^C"}
     end
 
     # attempt to remove the pid file
@@ -255,15 +262,10 @@ class TAReceiver
   # save the log and connection, then yield back
   # this method assured that the connection gets closed
   def initialize(log, connection)
-    @mail_id = nil
     @log = log
     @connection = connection
     yield(self)
     connection.close
-  end
-
-  def set_mail_id(id)
-    @mail_id = id
   end
   
   Unexpectedly = "; probably caused by the client closing the connection unexpectedly"
@@ -274,19 +276,19 @@ class TAReceiver
       if text.class==Array
         text.each do |line|
           @connection.write(line+CRLF)
-          @log.debug(if @mail_id then @mail_id  end) {"<-  #{line}"} if echo && LogConversation
+          @log.debug("%06d"%Process::pid) {"<-  #{line}"} if echo && LogConversation
         end
         return text.last
       else
         @connection.write(text+CRLF)
-        @log.debug(if @mail_id then @mail_id  end) {"<-  #{text}"} if echo && LogConversation
+        @log.debug("%06d"%Process::pid) {"<-  #{text}"} if echo && LogConversation
         return nil
       end
     rescue Errno::EPIPE => e
-      @log.error(if @mail_id then @mail_id  end) {"#{e.to_s}#{Unexpectedly}"}
+      @log.error("%06d"%Process::pid) {"#{e.to_s}#{Unexpectedly}"}
       raise TAQuit
     rescue Errno::EIO => e
-      @log.error(if @mail_id then @mail_id  end) {"#{e.to_s}#{Unexpectedly}"}
+      @log.error("%06d"%Process::pid) {"#{e.to_s}#{Unexpectedly}"}
       raise TAQuit
     end
   end
@@ -297,14 +299,14 @@ class TAReceiver
       Timeout.timeout(ReceiverTimeout) do
         temp = @connection.gets
         text = if temp.nil? then nil else temp.chomp end
-        @log.debug(if @mail_id then @mail_id  end) {" -> #{if text.nil? then "<eod>" else text end}"} if echo && LogConversation
+        @log.debug("%06d"%Process::pid) {" -> #{if text.nil? then "<eod>" else text end}"} if echo && LogConversation
         return text
       end
     rescue Errno::EIO => e
-      @log.error(if @mail_id then @mail_id  end) {"#{e.to_s}#{Unexpectedly}"}
+      @log.error("%06d"%Process::pid) {"#{e.to_s}#{Unexpectedly}"}
       raise TAQuit
     rescue Timeout::Error => e
-      @log.debug(if @mail_id then @mail_id  end) {" -> <eod>"} if LogConversation
+      @log.debug("%06d"%Process::pid) {" -> <eod>"} if LogConversation
       return nil
     end
   end
