@@ -39,13 +39,9 @@ class TAServer
     rescue TAQuit
       # nothing to do here
     rescue Errno::ENOTCONN => e
-      log.warn("%06d"%Process::pid) {"Connection failure on port #{local_port} ignored; probably caused by a port scan"}
+      log.warn("%06d"%Process::pid) {"Client abruptly closed connection on port #{local_port}"}
     rescue Errno::ECONNRESET => e
-      log.warn("%06d"%Process::pid) {"Connection failure on port #{local_port} ignored; probably caused by a badly behaved client"}
-    rescue => e
-      log.fatal("%06d"%Process::pid) {"Rescue of last resort => #{e.class.name} --> #{e.to_s}"}
-      e.backtrace.each {|line| log.fatal("%06d"%Process::pid) {line}}
-      exit(9)
+      log.warn("%06d"%Process::pid) {"Client rudely reset connection on port #{local_port}"}
     ensure
       # close the database
       db_close if defined?(db_close)
@@ -119,10 +115,7 @@ class TAServer
           process_call(@log, local_port, connection, remote_port, remote_ip, remote_hostname, remote_service)
           @log.info("%06d"%Process::pid) {"Connection closed on port #{local_port} by #{ServerName}"}
         rescue Errno::ENOTCONN => e
-          @log.warn("%06d"%Process::pid) {"Connection failure on port #{local_port} ignored; probably caused by a port scan"}
-        rescue => e
-          @log.fatal("%06d"%Process::pid) {"#{e.inspect}"}
-          e.backtrace.each {|line| log.fatal("%06d"%Process::pid) {line}}
+          @log.warn("%06d"%Process::pid) {"Client abruptly closed connection on port #{local_port}"}
         ensure
           # here we close the child's copy of the connection --
           # since the parent already closed it's copy, this
@@ -199,8 +192,7 @@ class TAServer
     # store the pid of the server session
     begin
       File.open("/run/ssltransportagent/ssltransportagent.pid","w") { |f| f.write(pid.to_s) }
-    rescue => e
-      @log.warn("%06d"%Process::pid) {"#{e.inspect}"}
+    rescue Errno::EACCES => e
       @log.warn("%06d"%Process::pid) {"The pid couldn't be written. To save the pid, create a directory '/run/ssltransportagent' with r/w permissions for this user."}
       @log.warn("%06d"%Process::pid) {"Proceeding without writing the pid."}
     end
@@ -242,8 +234,10 @@ class TAServer
     # attempt to remove the pid file
     begin
       File.delete("/run/ssltransportagent/ssltransportagent.pid")
-    rescue => e
-      # ignore any error
+    rescue Errno::ENOENT => e
+      @log.warn("%06d"%Process::pid) {"No such file: #{e.inspect}"}
+    rescue Errno::EACCES, Errno::EPERM
+      @log.warn("%06d"%Process::pid) {"Permission denied: #{e.inspect}"}
     end
 
     # close the log
