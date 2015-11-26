@@ -189,7 +189,7 @@ text = recv_text(echo)
 ```
 The recv_text method receives one line of text from the client, strips off the `<cr><lf>`, and returns the text. It *does not* make any other changes to the text, such as stripping off leading and trailing spaces. The `echo` parameter can be true (default) or false, and determines whether or not the text will be copied into the log.
 
-If a timeout occurs, recv_text makes an entry into the log of `" -> <eod>"`, then returns nil.
+If a timeout occurs, or the client abruptly closes the connection, recv_text makes an entry into the log of `" -> <eod>"`, then returns nil. In the case of a Errno::ECONNRESET, recv_text makes an entry into the log so stating.
 
 ### Query Methods
 #### query_esc

@@ -1,9 +1,12 @@
+# v1.10
+* Moved rescues for Errno::ENOTCONN and Errno::ECONNRESET from the place they were into `recv_text` so that they can log their error and return an EOF (nil), then exit gracefully. This is in order so that if the client closes the connection abruptly with either one, the layer above will be able to count it against this IP, allowing the caller to implement some sort of 'bad behavior' tracking coupled with short term blocks for abusers.
+
 # v1.09
 * Fixed a naming error. (log --> @log)
 
 # v1.08
 * Added a rescue for Errno::ECONNRESET which is usually caused by a badly-behaved client. "Connection reset by peer" is the TCP/IP equivalent of slamming the phone down on the hook. It's more polite than merely not replying, leaving one hanging, but it's not the FIN-ACK expected of the truly polite TCP/IP conversation.
-* Removed `set_mail_id` and replaced it with the Process::pid in parenthesis ater the log level. This is because one needs to know which message is part of a set when more than one process is adding messages to the log. In this example,
+* Removed `set_mail_id` and replaced it with the Process::pid in parenthesis after the log level. This is because one needs to know which message is part of a set when more than one process is adding messages to the log. In this example,
 ```
 2015-11-13 03:58:11 [INFO] (022999) Connection accepted on port 25 from port 33402 at ::ffff:166.78.151.141 (rubymta-test)
 2015-11-13 03:58:11 [WARN] (023004) Connection failure on port 587 ignored; may be caused by a port scan
