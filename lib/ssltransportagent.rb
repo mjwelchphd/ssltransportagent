@@ -38,10 +38,6 @@ class TAServer
       TAReceiver::new(log, connection) { |rcvr| rcvr.receive(local_port, Socket::gethostname, remote_port, remote_hostname, remote_ip) }
     rescue TAQuit
       # nothing to do here
-    rescue Errno::ENOTCONN => e
-      log.warn("%06d"%Process::pid) {"Client abruptly closed connection on port #{local_port}"}
-    rescue Errno::ECONNRESET => e
-      log.warn("%06d"%Process::pid) {"Client rudely reset connection on port #{local_port}"}
     ensure
       # close the database
       db_close if defined?(db_close)
@@ -114,8 +110,6 @@ class TAServer
           remote_ip, remote_port = connection.io.remote_address.ip_unpack
           process_call(@log, local_port, connection, remote_port, remote_ip, remote_hostname, remote_service)
           @log.info("%06d"%Process::pid) {"Connection closed on port #{local_port} by #{ServerName}"}
-        rescue Errno::ENOTCONN => e
-          @log.warn("%06d"%Process::pid) {"Client abruptly closed connection on port #{local_port}"}
         ensure
           # here we close the child's copy of the connection --
           # since the parent already closed it's copy, this
@@ -291,8 +285,18 @@ class TAReceiver
   def recv_text(echo=true)
     begin
       Timeout.timeout(ReceiverTimeout) do
-        temp = @connection.gets
-        text = if temp.nil? then nil else temp.chomp end
+        begin
+          temp = @connection.gets
+          if temp.nil?
+            @log.warn("%06d"%Process::pid) {"The client abruptly closed the connection"}
+            text = nil
+          else
+            text = temp.chomp
+          end
+        rescue Errno::ECONNRESET => e
+          @log.warn("%06d"%Process::pid) {"The client slammed the connection shut"}
+          text = nil
+        end
         @log.debug("%06d"%Process::pid) {" -> #{if text.nil? then "<eod>" else text end}"} if echo && LogConversation
         return text
       end
