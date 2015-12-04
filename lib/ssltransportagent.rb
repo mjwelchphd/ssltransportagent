@@ -35,17 +35,18 @@ class TAServer
       end
       # a new object is created here to provide separation between server and receiver
       # this call receives the email and does basic validation
-      TAReceiver::new(log, connection) { |rcvr| rcvr.receive(local_port, Socket::gethostname, remote_port, remote_hostname, remote_ip) }
+      TAReceiver::new(log, connection).receive(local_port, Socket::gethostname, remote_port, remote_hostname, remote_ip)
     rescue TAQuit
       # nothing to do here
     ensure
       # close the database
       db_close if defined?(db_close)
       $db.close if $db
+      nil # don't return the TAReceiver object
     end
   end
 
-  # this method drops the process's root priviledges for security reasons
+  # this method drops the process's root privileges for security reasons
   def drop_root_privileges(user_name, group_name, working_directory)
     # drop root privileges
     if Process::Sys.getuid==0
@@ -109,13 +110,13 @@ class TAServer
           remote_hostname, remote_service = connection.io.remote_address.getnameinfo
           remote_ip, remote_port = connection.io.remote_address.ip_unpack
           process_call(@log, local_port, connection, remote_port, remote_ip, remote_hostname, remote_service)
-          @log.info("%06d"%Process::pid) {"Connection closed on port #{local_port} by #{ServerName}"}
         ensure
           # here we close the child's copy of the connection --
           # since the parent already closed it's copy, this
           # one will send a FIN to the client, so the client
           # can terminate gracefully
           connection.close
+          @log.info("%06d"%Process::pid) {"Connection closed on port #{local_port} by #{ServerName}"}
           # and finally, close the child's link to the log
           @log.close
         end
@@ -247,13 +248,10 @@ class TAReceiver
   include ServerConfig
   include ReceiverConfig
   
-  # save the log and connection, then yield back
-  # this method assured that the connection gets closed
+  # save the log and connection
   def initialize(log, connection)
     @log = log
     @connection = connection
-    yield(self)
-    connection.close
   end
   
   Unexpectedly = "; probably caused by the client closing the connection unexpectedly"

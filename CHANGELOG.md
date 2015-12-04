@@ -1,3 +1,8 @@
+# v1.11
+* Removed an unneeded `connection.close`.
+* Moved the "Connection closed..." message.
+* Changed the `TAReceiver.new` initialize method to *not* use yield to execute the receive method, but to just run it directly. This is because the `connection.close` is already guaranteed to be executed through an `ensure` after `TAReceiver::receive` completes.
+
 # v1.10
 * Moved rescues for Errno::ENOTCONN and Errno::ECONNRESET from the place they were into `recv_text` so that they can log their error and return an EOF (nil), then exit gracefully. This is in order so that if the client closes the connection abruptly with either one, the layer above will be able to count it against this IP, allowing the caller to implement some sort of 'bad behavior' tracking coupled with short term blocks for abusers.
 
